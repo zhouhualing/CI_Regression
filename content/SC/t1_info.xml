@@ -1,0 +1,14 @@
+
+<dir>
+<script path="./t1.py">
+    <requiredTags>        
+        <package value="SEARCHCENTER"/><package value="NETSCOOL"/>
+        <regressionType value="DEV_CI"/>
+    </requiredTags>
+    <email value="zhou_hua_ling@163.com"/>
+<!--    <parameters>
+        <body value='{"id":1234}' />
+    </parameters>-->
+</script>
+</dir>    
+
