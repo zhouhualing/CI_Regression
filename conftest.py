@@ -10,6 +10,8 @@ import stat
 import getpass
 import logging
 from regression import TestCase
+import sys
+from io import StringIO
 
 
 ###############################################################################
@@ -19,6 +21,18 @@ class _Harness(object):
         self.tc_names = {}
         self.logger = {}
         self.config = None
+        self.oldouterr = None
+        self.outerr = None
+
+    def start_capture(self):
+        self.oldouterr = sys.stdout, sys.stderr
+        out = [StringIO(), StringIO()]
+        sys.stdout, sys.stderr = out
+        self.outerr = out
+
+    def stop_capture(self):
+        sys.stdout, sys.stderr = _harness.oldouterr
+        return self.outerr[0].getvalue(), self.outerr[1].getvalue()
 
     def getLogger(self, pid):
         if pid not in self.logger:
@@ -46,11 +60,11 @@ def pytest_addoption(parser):
             'specify in seconds; 0 to disable timeout')
 
     group.addoption('--keep-all-tmpdir', action='store_true',
-       default=False, dest='keep_all_tmpdir',
+       default=True, dest='keep_all_tmpdir',
        help='keep all tmpdir; default keep only failed tmpdir')
 
     group.addoption('--archive-tmpdir', action='store_true',
-       default=False, dest='archive_tmpdir',
+       default=True, dest='archive_tmpdir',
        help='archive tmpdir')
 
     # group.addoption('--log-level', action='store', type='string',
@@ -92,7 +106,6 @@ def pytest_cmdline_main(config):
 @pytest.mark.tryfirst
 def pytest_unconfigure(config):
     #TODO hualing
-    #undo sth
     if config.option.archive_tmpdir and os.path.exists(config.option.orig_basetemp):
         logging.shutdown()
         arch = shutil.make_archive('tmpdir', 'gztar', config.option.orig_basetemp)
@@ -160,7 +173,6 @@ class PythonItem(pytest.Item):
         self.check_in_delay = _harness.option.check_in_delay
         self.testexecuter = _harness.option.testexecuter
         self.tmpdir = _harness.config.option.basetemp
-        self.capfd = _harness.capfd
 
     def teardown(self):
         if self.discard_tmpdir:
@@ -192,6 +204,7 @@ class PythonItem(pytest.Item):
         return {'args':args , 'cwd':cwd}
 
     def runtest(self):
+        _harness.start_capture()
         logger = _harness.getLogger(str(os.getpid()))
         base_path = os.path.abspath(os.path.dirname(__file__))
 
@@ -209,22 +222,15 @@ class PythonItem(pytest.Item):
         env["PATH"] += os.pathsep + str(cwd)
 
 
-
         logger.info("Running %s with args: %s", self.name, str(args))
 
         p = subprocess.Popen(args, cwd=cwd, env=env)
         # TODO: add per test case timeout
         timeout = _harness.option.timeout
         rc = self.wait_for_script(p, timeout)
-
         logger.info("%s finished" , self.name)
+        script_out,script_err = _harness.stop_capture()
 
-        return
-
-
-        script_out,script_err = self.capfd.readouterr()
-
-        # Save the stdout/stderr to output.txt
         file_name = os.path.join(str(self.tmpdir), 'output.txt')
         with open(file_name, 'w') as fd:
             fd.write('-'*31+ 'Stdout' +'-'*31 +" \n\n")
@@ -292,13 +298,3 @@ class PythonItem(pytest.Item):
 ###############################################################################
 class TestCaseException(Exception):
     pass
-
-
-
-@pytest.fixture(autouse=True)
-def _configure_application(request,capfd, monkeypatch):
-    _harness.request = request
-    _harness.capfd=capfd
-    print("hello")
-    out, err = capfd.readouterr()
-    assert out == "hello\n"

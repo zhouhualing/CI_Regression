@@ -3,4 +3,5 @@ class T1:
 
 def test():
     print(T1().Val)
+    raise Exception("u r wrong")
 test()

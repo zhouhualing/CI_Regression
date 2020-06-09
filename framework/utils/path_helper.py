@@ -23,3 +23,8 @@ class PathHelper(object):
     def get_cookie_path():
         return PathHelper.COOKIE_PATH
 
+    @staticmethod
+    def join_path(*paths):
+        return os.path.join(paths).replace('\\', '/');
+
+
