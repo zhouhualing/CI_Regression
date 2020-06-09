@@ -160,7 +160,7 @@ class PythonItem(pytest.Item):
         self.check_in_delay = _harness.option.check_in_delay
         self.testexecuter = _harness.option.testexecuter
         self.tmpdir = _harness.config.option.basetemp
-        self.capfd = _harness.cafd
+        self.capfd = _harness.capfd
 
     def teardown(self):
         if self.discard_tmpdir:
